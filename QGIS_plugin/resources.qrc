@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/GMQ710Analyser" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>GMQ717 REIT</title>
+		<meta charset="UTF-8">
+
+		<!-- https://leafletjs.com/download.html -->
+		<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+		<link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
+
+		<!-- La méthode la plus directe pour appeler un fichier en asynchrone (AJAX) est de le faire avec une bibliothèque de programmation externe : Jquery-->
+		<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+		
+		<!--		Importation des instructions CSS et des fonction JS de Bootstrap-->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+
+				
+		<!-- Importation du plugin Chroma pour les couleurs des points -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.1/chroma.min.js"></script>
+		
+		<style>
+
+
+			/* On indique la taille de l'emplacement de la carte*/
+			html, body {height: 100%; margin: 0;}
+			#Carte { width: 100%; height: 94%; }
+
+			/* Style de la légende */
+			.legend {
+				padding: 6px 6px;
+				font: 14px/16px Arial, Helvetica, sans-serif;
+				background: rgba(255,255,255,0.8);
+				box-shadow: 0 0 15px rgba(0,0,0,0.2);
+				border-radius: 5px;
+				width: 250px;
+				text-align: left;
+				line-height: 22px;
+				color: #555;
+				width: 180px;
+			}
+			
+			/* Style des points */
+			.legend circleMarker {
+				width: 12px;
+				height: 12px;
+				border-radius: 100%;
+				float: left;
+				margin-right: 16px;
+				opacity: 1;
+				margin-left: 8px;
+			}
+
+			/* Style du panneau d'information de REIT */
+			.statsPanel {
+				padding: 6px 6px;
+				font: 14px/16px Arial, Helvetica, sans-serif;
+				background: rgba(255,255,255,0.8);
+				box-shadow: 0 0 15px rgba(0,0,0,0.2);
+				border-radius: 5px;
+				width: relative;
+				text-align: left;
+				line-height: 22px;
+				color: #555;
+			}
+
+			/* On modifie l'espacement par défaut des changements de lignes (étaient trop espacés) */
+			.br {
+            line-height: 100%;
+        	}
+
+
+		</style>
+	</head>
+
+
+	<body>
+		
+		<!-- Utilisation d'un template Bootstrap, définit l'affichage de la barre du haut -->
+		<nav class="navbar navbar-expand-lg navbar-light bg-light">
+			<a class="navbar-brand" href="#">Filtres REIT : </a>
+			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+			
+			<div class="collapse navbar-collapse" id="navbarSupportedContent">
+				<ul class="navbar-nav mr-auto">
+					<form class="form-inline my-2 my-lg-0">
+
+						<!-- Un menu déroulant pour choisir un REIT (pour filtres) -->
+						<li class="nav-item mr-sm-2">
+							<select class="custom-select" id ="reit">
+								<option value="0">REIT</option>
+								<option value="2">Allied REIT</option>
+								<option value="1">BTB REIT</option>
+								<option value="3">Plaza REIT</option>
+							</select>
+						</li>
+						
+						<!-- Un menu déroulant pour choisir une province (pour filtres) -->
+						<li class="nav-item mr-sm-2">
+							<select class="custom-select" id ="province">
+								<option value="all">Province</option>
+								<option value='AB'>AB</option>
+								<option value='BC'>BC</option>
+								<option value='MB'>MB</option>
+								<option value='NB'>NB</option>
+								<option value='NL'>NL</option>
+								<option value='NT'>NT</option>
+								<option value='NS'>NS</option>
+								<option value='NU'>NU</option>
+								<option value='ON'>ON</option>
+								<option value='PE'>PE</option>
+								<option value='QC'>QC</option>
+								<option value='SK'>SK</option>
+								<option value='YT'>YT</option>
+							</select>
+						</li>
+
+						<!-- Un menu déroulant pour choisir un secteur -->
+						<li class="nav-item mr-sm-2">
+							<select class="custom-select" id ="sector">
+								<option value="0">Secteur</option>
+								<option value='1'>Commercial</option>
+								<option value='2'>Bureaux</option>
+								<option value='3'>Industriel</option>
+							</select>
+						</li>
+
+						<!-- Un nombre pour choisir un nombre de propriétés dans localité  (pour filtrer) -->
+						<input class="form-control mr-sm-2" placeholder="Propriétés min. (#)" aria-label="resultsMin" id="resultsMin" size="12">
+						
+						<!-- Un nombre pour choisir le rendement minimal (pour filtrer) -->
+						<input class="form-control mr-sm-2" placeholder="Rendement min. (%)" aria-label="yield" id="yield" size="14">
+						
+						<!-- Un bouton pour exécuter la flitration -->
+						<button class="btn btn-outline-success my-2 my-sm-0" id="envoyer" type="button" size="6">Filtrer</button>
+						
+
+					
+					</form>
+				</ul>
+
+				<!-- Pour l'affichange de la liste à droite de la barre du haut -->
+				<ul class="navbar-nav navbar-right">
+					<form class="form-inline my-2 my-lg-0">
+						<li class="nav-item mr-sm-2">
+
+							<!-- Choisir un REIT pour afficher son information -->
+							<select class="custom-select" id ="statsReit">
+								<option value="0">Infos REIT</option>
+								<option value="2">Allied REIT</option>
+								<option value="1">BTB REIT</option>
+								<option value="3">Plaza REIT</option>
+							</select>
+						</li>
+					</form>
+				</ul>
+			</div>
+		</nav>
+
+		<!--	Ajout d'un conteneur div pour y mettre la carte-->
+		<div class="container-fluid" id='Carte'></div>
+		
+		<script>
+
+			// Informations et liens pour les fonds de cartes
+			mapboxUrl = "https://api.mapbox.com/styles/v1/{id}/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1IjoiYnVsYnV6b3IiLCJhIjoiY2tmc3AxdnhqMGVlaTJ0cXFxNGJzZnAxZyJ9.8_eZSZANsYjTkv91S6aX2w"
+			mapboxAttribution = 'Fond de plan OSM & MapBox.'
+			googleAttribution = 'Fond de plan Google Street View.'
+			
+			fondDark = L.tileLayer(mapboxUrl, {id: 'bulbuzor/ckm2g86n33sbt17s88b37drgq', attribution: mapboxAttribution})
+			fondLight = L.tileLayer(mapboxUrl, {id: 'bulbuzor/ckm2hf75i0xo517mtakbnwc5r', attribution: mapboxAttribution})
+			fondGoogle = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {attribution: googleAttribution})
+
+			// Création de la carte et affichage du fondGoogle par défaut
+			maCarte = L.map('Carte', {
+				center: [55, -100],
+				zoom: 4,
+				layers: [fondGoogle]
+			}
+			)
+
+
+			// Ajout d'un "event listener" sur le bouton "envoyer" (Filtrer) :
+			btnSubmit = document.getElementById("envoyer")
+			btnSubmit.addEventListener("click", function(e) {
+								
+				// Les valeurs de filtration sont extraites
+				var inputReit = document.getElementById("reit")
+				var reit = parseInt(inputReit.value)
+				
+				var inputProvince = document.getElementById("province")
+				var province = inputProvince.value
+
+				var inputSector = document.getElementById("sector")
+				var sector = inputSector.value
+				
+				var inputResultsMin = document.getElementById("resultsMin")
+				var resultsMin = parseInt(inputResultsMin.value)
+
+				var inputYield = document.getElementById("yield")
+				var yield = parseFloat(inputYield.value)
+				
+				// On envoie ces valeurs dans une fonction pour récuperer les propriétés
+				getProperties(reit, province, sector, resultsMin, yield)
+			})
+
+
+			// Ajout d'un "event listener" sur la liste déroulante "statsReit" (pour modifier les informations affichées à chaque changement dans la liste) :
+			statsSubmit = document.getElementById("statsReit")
+			statsSubmit.addEventListener("change", function(e) {
+
+				// On récupère la valeur choisie et l'envoie à une fonction pour récuperer les infos du Reit
+				var inputStatsReit = document.getElementById("statsReit")
+				var statsReit = parseInt(inputStatsReit.value)
+				getReit(statsReit)
+			})
+
+			// On forme et ajoute la boite pour afficher l'option de fond de carte
+			baseMaps = {
+				"<b>Thème Google<b>": fondGoogle,
+				"<b>Thème claire</b>": fondLight,
+				"<b>Thème foncée<b>": fondDark
+			}
+			L.control.layers(baseMaps).addTo(maCarte)
+			
+			// Récuperera les points à afficher (appelé dans getProperties)
+			couche = new L.layerGroup()
+
+			// Raccourcit pour associer l'ID de secteur à son nom (devrait se faire par le biais du SQL idéalement) 
+			sectors = {
+				1: 'Commercial',
+				2: 'Bureaux',
+				3: 'Industriel'
+			}
+
+			// On appelle nos deux fonctions d'affichage avec les options génériques pour l'affichage par défaut
+			getProperties(0, "all", 0, 0, 0)
+			getReit(0)
+			
+
+			function getProperties(reit, province, sector, resultsMin, yield) {
+				/*
+					Cette fonction récupère tous les points appartenant à des REIT répondant aux critères de filtration.
+				*/
+
+				// Si une couche a déjà été crée, effaçons-là
+				try {
+					maCarte.removeLayer(couche)
+				} catch (err) {
+					console.log(err)
+				}
+
+				// Si varMin n'a pas de valeur, donnons-lui une valeur minimale
+				if (isNaN(resultsMin)) {
+					resultsMin = 0
+				}
+
+				// Si varMin n'a pas de valeur, donnons-lui une valeur minimale
+				if (isNaN(yield)) {
+					yield = 0
+				}
+
+				// On réinitialise la variable de couche
+				couche.clearLayers()
+
+				var url_php = 'php/sqlProperties.php?reit=' + reit + '&province=' + province + '&sector=' + sector +'&resultsMin=' + resultsMin + '&yield=' + yield;
+				console.log(url_php)
+
+				// Appel du fichier php interrogeant la base de données
+				$.ajax({url: url_php,
+					success: function(response){
+
+						// Affichage de la réponse en console pour débuggage et on l'assigne comme GeoJSON à data
+						console.log(response)
+						data = JSON.parse(response)
+
+						// On passe au travers des entités récupérés pour récupérer les REITs uniques retenus
+						unique_reits = [];
+						for (feature in data.features) {
+							var reit = data.features[feature]['properties']['name_reit'];
+
+							// On l'ajoute à la liste si pas déjà présent, sinon on passe
+							unique_reits.indexOf(reit) === -1 ? unique_reits.push(reit) : null;
+						}
+						unique_reits.sort()
+
+						// On crée la palette de couleur, on la forme plus grande de 1 sinon on obtient des points gris..
+						ramp = new chroma.scale('Set1').colors(unique_reits.length + 1)
+
+						// On crée un dictionnaire associant chaque REIT unique à une couleur
+						ramp_dic = {}
+						for (reit_i in unique_reits) {
+							ramp_dic[unique_reits[reit_i]] = ramp[reit_i]
+						}
+
+						// On passe de nouveau au travers des entités du GeoJSON pour les fins d'affichage
+						for (feature in data.features) {
+
+							// On récupère la longitude (x) et latitude (y)
+							var x = data.features[feature]['geometry']['coordinates'][0]
+							var y = data.features[feature]['geometry']['coordinates'][1]
+
+
+							// On crée le style de chaque point en y associant la bonne couleur
+							cercle = L.circleMarker([y, x], {
+								radius: 4,
+								stroke: true,
+								color: 'black',
+								weight: 1,
+								fillColor: ramp_dic[data.features[feature]['properties']['name_reit']],
+								fillOpacity: 1
+							});
+
+							// On crée une chaine de caractère vide qui servira à l'affichage du ou des secteurs dans l'infobulle
+							var sectors_text = '';
+
+							// On transforme le "dictionnaire" (sous forme de string) de data.features[feature]['properties']['sectors'] sous forme d'objet liste
+							var sector_list = JSON.parse(data.features[feature]['properties']['sectors'].replace("{", "[").replace("}", "]"));
+
+							// On itère sur cette liste
+							for (sector_i in sector_list) {
+
+								// On récupère le nom selon notre dictionnaire préalablement écrit "à la mitaine"
+								var sector_name = sectors[sector_list[sector_i]];
+
+								// On ajoute un ", " à la fin pour séparer les secteurs
+								sectors_text = sectors_text.concat(sector_name + ', ');
+							}
+
+							// On retire les dernier deux caractères (qui seront ", ") pour rendre ça joli
+							sectors_text = sectors_text.substring(0, sectors_text.length - 2);
+
+							// On crée l'infobulle du point avec ce string et d'autres infos du GeoJSON "data"
+							cercle.bindPopup(
+								'<h1>' + data.features[feature]['properties']['name_reit'] + '</h1><br>' +
+								'<h4>' + data.features[feature]['properties']['address'] + ", " + data.features[feature]['properties']['city']  + ", " + data.features[feature]['properties']['province'] + '</h4><br>' + 
+								'<h5>' + sectors_text + '</h5><br>' +
+								'<a href=' + data.features[feature]['properties']['url'] + '>Site web</a><br>' 
+							)
+						
+
+							// On ajoute l'entié à la couche
+							cercle.addTo(couche)
+
+						}
+						
+						// On ajoute la couche à la carte et on appelle la fonction pour dessiner la légende
+						maCarte.addLayer(couche)
+						makeLegend()
+					}
+				})
+			}
+
+			function getReit(reit_id) {
+				/*
+					Cette fonction nous sert à récupérer les informations d'un REIT pour la boite d'informations du bas-gauche depuis la liste déroulante "statsReit".
+				*/
+
+				// Si le REIT séléctionné n'est pas 0 (i.e. aucun choix), on fait une requête SQL et on assigne la réponse JSON à "dataReit"
+				if (reit_id != 0) {
+					var url_php = 'php/sqlReit.php?reit_id=' + reit_id;
+					console.log(url_php);
+					$.ajax({url: url_php,
+					success: function(response){
+						console.log(response)
+						dataReit = JSON.parse(response)
+						console.log(dataReit)
+					}
+					})
+
+				// Si le REIT séléctionné est 0 (i.e. aucun choix/"Infos REIT"), on associe dataReit à 0 pour éviter des bug de variable non-définie
+				} else {
+					dataReit = 0
+				}
+
+				// On envoie l'ID du reit retenu ainsi que le JSON (ou 0) à la fonction formant la boite d'informations
+				makeStatsPanel(reit_id, dataReit)
+			}
+
+			function makeLegend () {
+				/*
+					On crée la légende, appelle les variables unique_reits et ramp_dic formées dans "getProperties"
+				*/
+
+				// Si une légende a déjà été définie, on l'efface
+				try {
+					maCarte.removeControl(legend)
+				}
+				catch(err) {}
+
+				// On positionne la  légende sur la carte
+				legend = L.control({position: 'bottomright'})
+
+				// On peuple la légende
+				legend.onAdd = function () {
+					
+					// La fenêtre sera définie en HTML comme un contenant "div" qui sera associé à la classe CSS "legend"
+					div = L.DomUtil.create('div', 'legend')
+					
+					// Construction des lignes de la légende (une ligne pour les valeurs faibles, et une pour les valeurs élevées)
+					labels = []
+
+					// Ajoute le HTML de chaque point et nom qui s'affichera dans la légende
+					for (i in unique_reits){
+						labels.push('<circleMarker style="background:' + ramp_dic[unique_reits[i]] + '"></circleMarker>' + unique_reits[i] + "<br>")
+					}
+
+					
+					// Je construis le code HTML de la légende à partir du titre et de la liste des classes de la légende
+					div.innerHTML = '<b>' + 'Légende' + '</b><hr>' + labels.join('<r>')
+					return div
+				}
+
+				// Ajout de la fenêtre légende à ma carte
+				legend.addTo(maCarte)			
+
+			}
+
+			function makeStatsPanel(reit_id, dataReit) {
+				/*
+					Cette fonction permettra de former la boite d'information de REIT (bas-gauche) à partir des variables qui lui sont fournies.
+				*/
+
+				// Si une légende a déjà été définie, on l'efface pour éviter le dédoublement
+				try {
+					maCarte.removeControl(statsPanel)
+				}
+				catch(err) {}
+
+				// On positionne le panneau sur la carte
+				statsPanel = L.control({position: 'bottomleft'})
+
+				// Sur ajout du panneau, on peuple son HTML
+				statsPanel.onAdd = function () {
+
+					// On crée le DOM
+					div = L.DomUtil.create('div', 'statsPanel')
+
+					// On ajoute un titre dans tous les cas
+					div.innerHTML = '<h4><b>REIT infos</b></h4>'
+
+					
+					if (reit_id == 0) {
+						// Si pas de REIT choisi, on ajoute du texte à cet effet
+						div.innerHTML = div.innerHTML + '<h5>Choisir un REIT (haut-droit)</h5>';
+					} else {
+
+						// Si pas de REIT choisi, on ajoute du texte à cet effet
+						// Construction des lignes d'informations
+						div.innerHTML += '<p><b>Nom</b>: ' + dataReit['name'] + '<br>';
+						div.innerHTML += '<b>Symbole</b>: ' + dataReit['ticker'] + '<br>';
+						div.innerHTML += '<b>Site web</b>: <a href=' + dataReit['website'] + '>' + dataReit['website'] + '<br>';
+						div.innerHTML += '<b>Propriétés (#)</b>: ' + dataReit['nb_property'] + '<br>';
+						div.innerHTML += '<b>Valorisation (M $CA)</b>: ' + dataReit['marketcap_m'] + '<br>';
+						div.innerHTML += '<b>Revenues (k $CA)</b>: ' + dataReit['revenue_t'] + '<br>';
+						div.innerHTML += '<b>Prix/action ($CA)</b>: ' + dataReit['share'] + '<br>';
+						div.innerHTML += '<b>Div/action ($CA)</b>: ' + dataReit['dividend'] + '<br>';
+						div.innerHTML += '<b>Rendement (%)</b>: ' + dataReit['yield'] + '<br>';
+						div.innerHTML += '</p>'
+
+					}
+					return div
+				}
+				
+				// On ajoute le panneau d'informations à la carte
+				statsPanel.addTo(maCarte)
+			}
+
+			
+		</script>
+	</body>
+</html>
